@@ -1,0 +1,19 @@
+#%RAML 1.0
+title: wco-sapi-rest
+protocols:
+  - HTTP
+  - HTTPS
+version: v1
+
+/user:
+  get:
+    queryParameters:
+      page:
+        type: number
+        required: true
+    responses:
+      200:
+        body:
+          application/json:
+            example: !include /examples/user-details-by-page-response-file.json
+          

@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
-    <http:listener-config name="wco-sapi-rest-httpListenerConfig">
-        <http:listener-connection host="0.0.0.0" port="8081" />
-    </http:listener-config>
-    <apikit:config name="wco-sapi-rest-config" api="wco-sapi-rest.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
-    <http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="87048fa9-d775-43ce-8a74-81f2c807362f" >
-		<http:request-connection host="reqres.in" />
-	</http:request-config>
+	
+	
 	<flow name="wco-sapi-rest-main">
-        <http:listener config-ref="wco-sapi-rest-httpListenerConfig" path="/api/*">
+        <http:listener path="/api/*" config-ref="wco-sapi-rest-httpListenerConfig">
             <http:response statusCode="#[vars.httpStatus default 200]">
-                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
             </http:response>
             <http:error-response statusCode="#[vars.httpStatus default 500]">
-                <http:body>#[payload]</http:body>
-                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
             </http:error-response>
         </http:listener>
-        <apikit:router config-ref="wco-sapi-rest-config" />
+        <apikit:router config-ref="wco-sapi-rest-config"/>
         <error-handler>
             <on-error-propagate type="APIKIT:BAD_REQUEST">
                 <ee:transform doc:name="Transform Message">
@@ -99,41 +94,15 @@ output application/json
             </on-error-propagate>
         </error-handler>
     </flow>
-    <flow name="wco-sapi-rest-console">
-        <http:listener config-ref="wco-sapi-rest-httpListenerConfig" path="/console/*">
-            <http:response statusCode="#[vars.httpStatus default 200]">
-                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
-            </http:response>
-            <http:error-response statusCode="#[vars.httpStatus default 500]">
-                <http:body>#[payload]</http:body>
-                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
-            </http:error-response>
-        </http:listener>
-        <apikit:console config-ref="wco-sapi-rest-config" />
-        <error-handler>
-            <on-error-propagate type="APIKIT:NOT_FOUND">
-                <ee:transform doc:name="Transform Message">
-                    <ee:message>
-                        <ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{message: "Resource not found"}]]></ee:set-payload>
-                    </ee:message>
-                    <ee:variables>
-                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
-                    </ee:variables>
-                </ee:transform>
-            </on-error-propagate>
-        </error-handler>
-    </flow>
     <flow name="get:\user:wco-sapi-rest-config">
         <logger level="INFO" doc:name="====start=====" doc:id="e8b28509-154b-4654-8f6f-fde3fb35e9a3" message='#["====start====="]'/>
+		<flow-ref doc:name="Flow Reference to commonStartLoggerFlowSub_Flow" doc:id="75ee93af-aa2b-4c4c-be9f-5e94a878841b" name="commonStartLoggerFlowSub_Flow"/>
 		<set-variable value="#[attributes.queryParams.page]" doc:name="Set Variable" doc:id="29026b73-e862-40fd-bbcc-c678abbbd0c8" variableName="page"/>
-		<http:request method="GET" doc:name="Request" doc:id="d87eac74-b747-416e-80df-5e5dd7423727" config-ref="HTTP_Request_configuration" path="/api/users">
+		<http:request method="GET" doc:name="Request" doc:id="d87eac74-b747-416e-80df-5e5dd7423727" path="${userpath.path}" config-ref="HTTP_Request_configuration" responseTimeout="${respones.timeout}">
 			<http:query-params ><![CDATA[#[output application/java
 ---
 {
-	"page" : "vars.page"
+	"page" : vars.page
 }]]]></http:query-params>
 		</http:request>
 		<ee:transform doc:name="Transform Message">
@@ -141,29 +110,10 @@ output application/json
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{
-  userDetails: {
-    page: 2,
-    per_page: 6,
-    total: 12,
-    total_pages: 2,
-    data: [
-      {
-        id: 7,
-        email: "michael.lawson@reqres.in",
-        first_name: "Michael",
-        last_name: "Lawson",
-        avatar: "https://reqres.in/img/faces/7-image.jpg"
-      }
-    ],
-    support: {
-      url: "https://contentcaddy.io?utm_source=reqres&utm_medium=json&utm_campaign=referral",
-      text: "Tired of writing endless social media content? Let Content Caddy generate it for you."
-    }
-  }
-} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+payload]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+		<flow-ref doc:name="Flow Reference to commonEndLoggerFlowSub_Flow" doc:id="5e2a6057-94fa-48d8-b65c-b07c389822c5" name="commonEndLoggerFlowSub_Flow"/>
 		<logger level="INFO" doc:name="====end=====" doc:id="035fa663-bee6-4bfa-94a7-87c61638d254" message='#["====end====="]'/>
     </flow>
 </mule>
